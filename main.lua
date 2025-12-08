@@ -38,6 +38,7 @@ function createEntity(params)
 end
 
 function love.load()
+	love.graphics.setDefaultFilter("nearest", "nearest")
 	levels = require("levels")
 	level = 1
 	totaldeaths = 2
@@ -69,7 +70,7 @@ function love.load()
 		two = love.graphics.newImage("sprites/rock_2.png")
 	}
 	
-	love.graphics.setNewFont("fonts/8x16.ttf",18)
+	love.graphics.setNewFont("fonts/Pix32.ttf",12)
 	sound = {}
 	sound.collision = love.audio.newSource("sound/collision.wav", "static")
 	sound.music = love.audio.newSource("sound/music.wav", "stream")
