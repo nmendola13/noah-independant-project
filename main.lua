@@ -1,4 +1,5 @@
 local TILE_SIZE = 32
+local CHEATCODE = false
 
 local TILES = {
 	EMPTY = 0,
@@ -6,6 +7,9 @@ local TILES = {
 	DEATH = 2,
 	PLAYER_ITEM = 3,
 	TARGET_ITEM = 4,
+	GRASS = 5,
+	PLAYER_ITEM_FILL = -3,
+	TARGET_ITEM_FILL = -4,
 }
 
 local COLORS = {
@@ -33,6 +37,7 @@ function createEntity(params)
 		collectibles_collected = 0,
 		color = params.color,
 		collectible_type = params.collectible_type,
+		is_Frozen = false,
 	}
 	return entity
 end
@@ -67,10 +72,12 @@ function love.load()
 
 	wall_sprites = {
 		one = love.graphics.newImage("sprites/rock_1.png"),
-		two = love.graphics.newImage("sprites/rock_2.png")
+		two = love.graphics.newImage("sprites/rock_2.png"),
+		lava = love.graphics.newImage("sprites/lava.png"),
+		grass = love.graphics.newImage("sprites/grass.png")
 	}
-	
-	love.graphics.setNewFont("fonts/Pix32.ttf",12)
+
+	love.graphics.setNewFont("fonts/Pix32.ttf", 14)
 	sound = {}
 	sound.collision = love.audio.newSource("sound/collision.wav", "static")
 	sound.music = love.audio.newSource("sound/music.wav", "stream")
@@ -108,103 +115,129 @@ function love.update(dt)
 end
 
 function love.draw()
-	
-	if level > levels.count() then
-		drawEndScreen()
-		return
-	end
-	
-	math.randomseed(os.time())
-	-- draw map tiles first
-		for y=1, #map do
-			for x=1, #map[y] do
-				local tile = map[y][x]
-				if tile == TILES.WALL then
-				local intRandom = math.random(2)
-				if intRandom == 1 then
+
+    if level > levels.count() then
+        drawEndScreen()
+        return
+    end
+    
+    math.randomseed(os.time())
+    -- draw map tiles first
+        for y=1, #map do
+            for x=1, #map[y] do
+                local tile = map[y][x]
+                if tile == TILES.WALL then
+                	local intRandom = math.random(2)
+                	if intRandom == 1 then
+                    	love.graphics.setColor(COLORS.WHITE)
+                    	love.graphics.draw(wall_sprites.one, x * TILE_SIZE, y * TILE_SIZE, 0, 1, 1)
+                	else
+                    	love.graphics.setColor(COLORS.WHITE)
+                    	love.graphics.draw(wall_sprites.two, x * TILE_SIZE, y * TILE_SIZE)
+                	end
+                	love.graphics.setColor(COLORS.WHITE)
+                	love.graphics.rectangle("line", x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                elseif tile == TILES.DEATH then
+                    love.graphics.setColor(COLORS.WHITE)
+                    love.graphics.draw(wall_sprites.lava, x * TILE_SIZE, y * TILE_SIZE, 0, 1, 1)
+					love.graphics.rectangle("line", x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+				elseif tile == TILES.GRASS then
 					love.graphics.setColor(COLORS.WHITE)
-					love.graphics.draw(wall_sprites.one, x * TILE_SIZE, y * TILE_SIZE, 0, 1, 1)
-				else
-					love.graphics.setColor(COLORS.WHITE)
-					love.graphics.draw(wall_sprites.two, x * TILE_SIZE, y * TILE_SIZE)
-				end
-				love.graphics.setColor(COLORS.WHITE)
-				love.graphics.rectangle("line", x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-				elseif tile == TILES.DEATH then
-                	love.graphics.setColor(COLORS.DEATH)
-					love.graphics.rectangle("fill", x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-				elseif tile == TILES.PLAYER_ITEM then
-					local c_size = TILE_SIZE / 2
-					local c_offset = (TILE_SIZE - c_size) / 2
-					love.graphics.setColor(COLORS.PLAYER)
-					love.graphics.rectangle("fill", x * TILE_SIZE + c_offset, y * TILE_SIZE + c_offset, c_size, c_size)
-				elseif tile == TILES.TARGET_ITEM then
-					local c_size = TILE_SIZE / 2
-					local c_offset = (TILE_SIZE - c_size) / 2
-					love.graphics.setColor(COLORS.TARGET)
-					love.graphics.rectangle("fill", x * TILE_SIZE + c_offset, y * TILE_SIZE + c_offset, c_size, c_size)
-				end
-			end
-		end
+					love.graphics.draw(wall_sprites.grass, x * TILE_SIZE, y * TILE_SIZE, 0, 1, 1)
+                elseif tile == TILES.PLAYER_ITEM then
+                    local c_size = TILE_SIZE / 2
+                    local c_offset = (TILE_SIZE - c_size) / 2
+                    love.graphics.setColor(COLORS.PLAYER)
+                    love.graphics.rectangle("fill", x * TILE_SIZE + c_offset, y * TILE_SIZE + c_offset, c_size, c_size)
+                elseif tile == TILES.TARGET_ITEM then
+                    local c_size = TILE_SIZE / 2
+                    local c_offset = (TILE_SIZE - c_size) / 2
+                    love.graphics.setColor(COLORS.TARGET)
+                    love.graphics.rectangle("fill", x * TILE_SIZE + c_offset, y * TILE_SIZE + c_offset, c_size, c_size)
+                end
+            end
+        end
 
-	-- draw entities on top of tiles
-	local function drawEntity(entity)
-		love.graphics.setColor(entity.color)
-		love.graphics.rectangle("fill", entity.act_x, entity.act_y, TILE_SIZE, TILE_SIZE)
-	end
-	drawEntity(player)
-	drawEntity(target)
+    -- draw entities on top of tiles
+    local function drawEntity(entity)
+        love.graphics.setColor(entity.color)
+        love.graphics.rectangle("fill", entity.act_x, entity.act_y, TILE_SIZE, TILE_SIZE)
+    end
+    drawEntity(player)
+    drawEntity(target)
 
-	-- UI: top-right panel with level and death counts
-	local windowW, windowH = love.graphics.getDimensions()
-	-- Make panel wider to accommodate sprites
-	local panelW = 240
-	local panelH = 112
-	local padding = 10
-	local px = windowW - panelW - padding
-	local py = padding
+    -- UI: top-right panel with level and death counts
+    local windowW, windowH = love.graphics.getDimensions()
+    local panelW = 240
+    local panelH = 112
+    local padding = 10
+    local px = windowW - panelW - padding
+    local py = padding
 
-	-- panel background (semi-transparent dark)
-	love.graphics.setColor(COLORS.BLACK[1], COLORS.BLACK[2], COLORS.BLACK[3], 0.6)
-	love.graphics.rectangle("fill", px, py, panelW, panelH)
+    -- panel background
+    love.graphics.setColor(COLORS.BLACK[1], COLORS.BLACK[2], COLORS.BLACK[3], 0.6)
+    love.graphics.rectangle("fill", px, py, panelW, panelH)
 
-	-- panel border
-	love.graphics.setColor(COLORS.WHITE[1], COLORS.WHITE[2], COLORS.WHITE[3], 0.2)
-	love.graphics.rectangle("line", px, py, panelW, panelH)
+    -- panel border
+    love.graphics.setColor(COLORS.WHITE[1], COLORS.WHITE[2], COLORS.WHITE[3], 0.2)
+    love.graphics.rectangle("line", px, py, panelW, panelH)
 
-	-- text inside panel
-	love.graphics.setColor(COLORS.WHITE)
-	local tx = px + 12
-	local ty = py + 8
-	-- Calculate sprite scale so the width matches the UI panel width
-	local original_sprite_w = player_emotion_sprites.neutral:getWidth()
-	local sprite_w = panelW
-	local sprite_scale = sprite_w / original_sprite_w
-	local sprite_h = player_emotion_sprites.neutral:getHeight() * sprite_scale
+    -- text inside panel
+    love.graphics.setColor(COLORS.WHITE)
+    local tx = px + 12
+    local ty = py + 8
+    -- Calculate sprite scale so the width matches the UI panel width
+    local original_sprite_w = player_emotion_sprites.neutral:getWidth()
+    local sprite_w = panelW
+    local sprite_scale = sprite_w / original_sprite_w
+    local sprite_h = player_emotion_sprites.neutral:getHeight() * sprite_scale
 
-	love.graphics.print("Level: " .. tostring(level), tx, ty)
+    love.graphics.print("Level: " .. tostring(level), tx, ty)
 
-	-- Player & Target Stats
-	love.graphics.print("Player deaths: " .. tostring(player.deathcount), tx, ty + 20)
-	love.graphics.print("Target deaths: " .. tostring(target.deathcount), tx, ty + 40)
-	love.graphics.print("Player items: " .. player.collectibles_collected .. "/" .. player.collectibles_to_collect, tx, ty + 60)
-	love.graphics.print("Target items: " .. target.collectibles_collected .. "/" .. target.collectibles_to_collect, tx, ty + 80)
+    -- Player & Target Stats for UI Panel
+    love.graphics.print("Player deaths: " .. tostring(player.deathcount), tx, ty + 20)
+    love.graphics.print("Target deaths: " .. tostring(target.deathcount), tx, ty + 40)
+    love.graphics.print("Player items: " .. player.collectibles_collected .. "/" .. player.collectibles_to_collect, tx, ty + 60)
+    love.graphics.print("Target items: " .. target.collectibles_collected .. "/" .. target.collectibles_to_collect, tx, ty + 80)
 
-	love.graphics.setColor(COLORS.WHITE) -- Reset color after drawing sprites
+    love.graphics.setColor(COLORS.WHITE) -- Reset color after drawing sprites
 	
 	-- Draw Player and Target emotion sprites below the UI panel
-	local sprite_x = px -- Align with the UI panel's x position
-	local sprite_padding = 10 -- Space between sprites
-	local target_sprite_y = windowH - sprite_h - padding
-	local player_sprite_y = target_sprite_y - sprite_h - sprite_padding
-	love.graphics.draw(player_emotion_sprites[player.emotion], sprite_x, player_sprite_y, 0, sprite_scale, sprite_scale)
-	love.graphics.draw(target_emotion_sprites[target.emotion], sprite_x, target_sprite_y, 0, sprite_scale, sprite_scale)
+    local sprite_x = px -- Align with the UI panel's x position
+    local sprite_padding = 10 -- Space between sprites
+    local target_sprite_y = windowH - sprite_h - padding
+    local player_sprite_y = target_sprite_y - sprite_h - sprite_padding
+    love.graphics.draw(player_emotion_sprites[player.emotion], sprite_x, player_sprite_y, 0, sprite_scale, sprite_scale)
+    love.graphics.draw(target_emotion_sprites[target.emotion], sprite_x, target_sprite_y, 0, sprite_scale, sprite_scale)
 
-	-- draw win overlay last so it sits above everything
-	if win then
-		hasdrawn = false
-		drawWinOverlay()
-	end
+    -- Level message panel (bottom-left). Make sure it doesn't overlap emotion sprites.
+    local left_padding = 10
+    local left_panel_default_w = 360
+    local left_panel_h = 50
+    local left_px = left_padding
+    local sprite_left_edge = sprite_x
+    local available_width = sprite_left_edge - (left_padding * 2)
+    local left_panel_w = math.min(left_panel_default_w, math.max(120, available_width))
+    local left_py = windowH - left_panel_h - left_padding
+
+    -- Draw the left message panel
+    love.graphics.setColor(0.08, 0.08, 0.08, 0.9)
+    love.graphics.rectangle("fill", left_px, left_py, left_panel_w, left_panel_h, 6, 6)
+    love.graphics.setColor(COLORS.WHITE[1], COLORS.WHITE[2], COLORS.WHITE[3], 0.9)
+    love.graphics.rectangle("line", left_px, left_py, left_panel_w, left_panel_h, 6, 6)
+
+    local level_message = ""
+    if levels and levels.data and levels.data[level] and levels.data[level].message then
+        level_message = levels.data[level].message
+    end
+    love.graphics.setColor(COLORS.WHITE)
+    love.graphics.printf(level_message, left_px + 12, left_py + 12, left_panel_w - 24)
+
+    -- win overlay
+    if win then
+        hasdrawn = false
+        drawWinOverlay()
+    end
 end
 
 function drawEndScreen()
@@ -238,7 +271,7 @@ function drawWinOverlay()
 	-- banner text
 	love.graphics.setColor(COLORS.WHITE)
 	local title = "LEVEL COMPLETE"
-	local subtitle = " You lived " .. tostring(player.deathcount + 1) .. " lives" .. " and Chris lived " .. tostring(target.deathcount + 1) .. " lives until you each other "
+	local subtitle = " You lived " .. tostring(player.deathcount + 1) .. " lives" .. " and buddy lived " .. tostring(target.deathcount + 1) .. " lives\n		until you fund each other "
 	-- if win
 	local titleW = love.graphics.getFont():getWidth(title)
 	local subtitleW = love.graphics.getFont():getWidth(subtitle)
@@ -262,12 +295,23 @@ function love.keypressed(key)
 
 	if key == "up" then
 		player_dx, player_dy = 0, -1
+		player.emotion = "neutral"
+		target.emotion = "neutral"
 	elseif key == "down" then
 		player_dx, player_dy = 0, 1
+		player.emotion = "neutral"
+		target.emotion = "neutral"
 	elseif key == "left" then
 		player_dx, player_dy = -1, 0
+		player.emotion = "neutral"
+		target.emotion = "neutral"
 	elseif key == "right" then
 		player_dx, player_dy = 1, 0
+		player.emotion = "neutral"
+		target.emotion = "neutral"
+	elseif key == "space" and CHEATCODE == true then
+		target.is_Frozen = not target.is_Frozen
+		return
 	else
 		return -- Not a movement key
 	end
@@ -281,7 +325,7 @@ function love.keypressed(key)
 	end
 
 	-- Move target (opposite direction)
-	if canMove(target, -player_dx, -player_dy) then
+	if canMove(target, -player_dx, -player_dy) and (target.is_Frozen == false) then
 		target.grid_x = target.grid_x - player_dx * TILE_SIZE
 		target.grid_y = target.grid_y - player_dy * TILE_SIZE
 	else
@@ -325,7 +369,7 @@ function checkEntityEvents(entity)
 		return true -- level changed, stop further processing
 	elseif tile == entity.collectible_type then
 		entity.collectibles_collected = entity.collectibles_collected + 1
-		map[ty][tx] = TILES.EMPTY -- remove collectible from map
+		map[ty][tx] = map[ty][tx] * -1 -- remove collectible from map
 	end
 	return false
 end
@@ -344,8 +388,6 @@ function changeLevel(newLevel)
 	map, p_start_x, p_start_y, t_start_x, t_start_y = levels.get(level)
 	win = false
 	winTimer = 0
-	player.emotion = "neutral"
-	target.emotion = "neutral"
 
 	-- reset collectibles
 	local function countCollectibles(entity)

@@ -1,0 +1,57 @@
+So you've got a minigame written in Lua and you need to port it to an app in fakeos.
+
+HOW APPS WORK
+
+Apps in fakeos are comprised of two parts:
+
+The app.lua file: this lives in the apps folder and is titled [yourminigamename].lua. It encapsulates all of the app's logic and stores it in a portable way which can be loaded into the fakeos. This file is what you'll need to write.
+
+The Window table: this is what the fakeos loads an app into. It's a container table for all of the app's logic which is also associated with a literal graphics window onscreen that can be dragged around, opened, and closed. You do not need to handle building this yourself, but you do need to know it exists, since your code will be loaded into it.
+
+With that knowledge, you can start creating your app.lua file. Title it whatever your app's name is, drop it in the apps folder, and start editing.
+
+Perhaps surprisingly, a valid app.lua file contains only one line of code: the Longest Return Statement Ever. It looks like this:
+
+---
+return {
+  [list of a ton of items which represent various aspects of the app]
+}
+---
+
+All you need to do now is fell out that table. Here's a list of everything you can put in there:
+
+MANDATORY ENTRIES:
+
+key: load
+value: a function taking the app's Window table as its only argument. This function is called once, when the window is created. Serves a similar function as love.load().
+
+key: unload
+value: a function taking the app's Window table as its only argument. Called once, when the window is closed. Used for cleanup.
+
+key: update
+value: a function taking two arguments: the Window table, and dt (amount of time passed since last update). Updates all the game logic, much like love.update().
+
+key: draw
+value: a function taking the app's Window table as its only argument. Handles drawing everything to the window. Do Not call love.graphics.setCanvas in this function, as the os will have already set the canvas to the app's window's canvas. Just use draw functions naively and assume they will draw to the right thing.
+
+key: keydown
+value: an event handler taking two arguments: the app's Window table, and a key that has been pressed. Triggers when a key is pressed, much like love.keypressed().
+
+key: keyup
+value: an event handler taking two arguments: the app's Window table, and a key that has been released. Triggers when a key is released, much like love.keyreleased().
+
+key: canvas
+value: a canvas, created by love.graphics.newCanvas(). Will be the canvas that is used to render the window.
+
+key: name
+value: a string, used as the player-facing name of the app. Will be displayed under the app's desktop icon and in the window title. For minigames, app titles tend to be in all caps, use underscores instead of spaces, and end in ".EXE".
+
+OPTIONAL ENTRIES:
+
+key:onclick
+value: an event handler taking five arguments: the app's Window table, an x position and y position relative to the app's canvas, a mouse button, and the number of times it was clicked. Triggers when a focused window is clicked on.
+
+key: textinput
+value: an event handler that triggers when text is typed into the window. Takes two arguments: the app's Window table, and the text typed.
+
+And that's it! after you fill in all the mandatory entries, you have a workable app. If you want it to have a desktop icon, just go to main.lua, scroll through love.load() until you find some lines of code calling the function addApp(), then add a call for your app. addApp() takes three arguments: the name of your app.lua file (without the .lua extension), and an x and y position to place the icon. Finally, be sure to make an app icon (64x64 png) and put it in the icons folder, with the same name as your app.lua file.
