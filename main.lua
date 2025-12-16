@@ -82,7 +82,7 @@ function love.load()
 	sound.collision = love.audio.newSource("sound/collision.wav", "static")
 	sound.music = love.audio.newSource("sound/music.wav", "stream")
 	sound.collision:setVolume(0.2)
-	sound.music:setVolume(0.3)
+	sound.music:setVolume(0.1)
 	sound.music:setLooping(true)
 	sound.music:play()
 
@@ -194,7 +194,7 @@ function love.draw()
 
     love.graphics.print("Level: " .. tostring(level), tx, ty)
 
-    -- Player & Target Stats for UI Panel
+    -- stats for UI
     love.graphics.print("Player deaths: " .. tostring(player.deathcount), tx, ty + 20)
     love.graphics.print("Target deaths: " .. tostring(target.deathcount), tx, ty + 40)
     love.graphics.print("Player items: " .. player.collectibles_collected .. "/" .. player.collectibles_to_collect, tx, ty + 60)
@@ -202,15 +202,15 @@ function love.draw()
 
     love.graphics.setColor(COLORS.WHITE) -- Reset color after drawing sprites
 	
-	-- Draw Player and Target emotion sprites below the UI panel
-    local sprite_x = px -- Align with the UI panel's x position
+	-- Player and Target emotion sprites below the UI panel
+    local sprite_x = px -- align with the UI panel's x position
     local sprite_padding = 10 -- Space between sprites
     local target_sprite_y = windowH - sprite_h - padding
     local player_sprite_y = target_sprite_y - sprite_h - sprite_padding
     love.graphics.draw(player_emotion_sprites[player.emotion], sprite_x, player_sprite_y, 0, sprite_scale, sprite_scale)
     love.graphics.draw(target_emotion_sprites[target.emotion], sprite_x, target_sprite_y, 0, sprite_scale, sprite_scale)
 
-    -- Level message panel (bottom-left). Make sure it doesn't overlap emotion sprites.
+    -- Level message panel (bottom-left)
     local left_padding = 10
     local left_panel_default_w = 360
     local left_panel_h = 50
@@ -233,7 +233,6 @@ function love.draw()
     love.graphics.setColor(COLORS.WHITE)
     love.graphics.printf(level_message, left_px + 12, left_py + 12, left_panel_w - 24)
 
-    -- win overlay
     if win then
         hasdrawn = false
         drawWinOverlay()
@@ -251,13 +250,12 @@ function drawEndScreen()
 	love.graphics.print(msg, x, y)
 end
 
--- draw level-complete overlay when win flag is set
 function drawWinOverlay()
 	-- full-screen darkening
 	love.graphics.setColor(COLORS.BLACK[1], COLORS.BLACK[2], COLORS.BLACK[3], 0.6)
 	love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
-	-- centered banner box (white text on dark)
+	-- banner box
 	local boxW = 360
 	local boxH = 120
 	local bx = (love.graphics.getWidth() - boxW) / 2
@@ -272,7 +270,6 @@ function drawWinOverlay()
 	love.graphics.setColor(COLORS.WHITE)
 	local title = "LEVEL COMPLETE"
 	local subtitle = " You lived " .. tostring(player.deathcount + 1) .. " lives" .. " and buddy lived " .. tostring(target.deathcount + 1) .. " lives\n		until you fund each other "
-	-- if win
 	local titleW = love.graphics.getFont():getWidth(title)
 	local subtitleW = love.graphics.getFont():getWidth(subtitle)
 	love.graphics.print(title, bx + (boxW - titleW) / 2, by + 20)
@@ -395,8 +392,11 @@ function changeLevel(newLevel)
 		entity.collectibles_collected = 0
 		for y=1, #map do
 			for x=1, #map[y] do
+				if map[y][x] < 0 then
+					map[y][x] = map[y][x] * -1 -- reset found tiles to normal
+				end
 				if map[y][x] == entity.collectible_type then
-					entity.collectibles_to_collect = entity.collectibles_to_collect + 1
+					entity.collectibles_to_collect = entity.collectibles_to_collect + 1 --count collectibles for ui
 				end
 			end
 		end
