@@ -8,6 +8,7 @@ local TILES = {
 	PLAYER_ITEM = 3,
 	TARGET_ITEM = 4,
 	GRASS = 5,
+	WATER = 6,
 	PLAYER_ITEM_FILL = -3,
 	TARGET_ITEM_FILL = -4,
 }
@@ -74,7 +75,8 @@ function love.load()
 		one = love.graphics.newImage("sprites/rock_1.png"),
 		two = love.graphics.newImage("sprites/rock_2.png"),
 		lava = love.graphics.newImage("sprites/lava.png"),
-		grass = love.graphics.newImage("sprites/grass.png")
+		grass = love.graphics.newImage("sprites/grass.png"),
+		water = love.graphics.newImage("sprites/water.png")
 	}
 
 	love.graphics.setNewFont("fonts/Pix32.ttf", 14)
@@ -144,6 +146,9 @@ function love.draw()
 				elseif tile == TILES.GRASS then
 					love.graphics.setColor(COLORS.WHITE)
 					love.graphics.draw(wall_sprites.grass, x * TILE_SIZE, y * TILE_SIZE, 0, 1, 1)
+				elseif tile == TILES.WATER then
+					love.graphics.setColor(COLORS.WHITE)
+					love.graphics.draw(wall_sprites.water, x * TILE_SIZE, y * TILE_SIZE, 0, 1, 1)
                 elseif tile == TILES.PLAYER_ITEM then
                     local c_size = TILE_SIZE / 2
                     local c_offset = (TILE_SIZE - c_size) / 2
