@@ -39,6 +39,8 @@ function createEntity(params)
 		color = params.color,
 		collectible_type = params.collectible_type,
 		is_Frozen = false,
+		sprites = params.sprites,
+		deathsounds = params.deathsounds
 	}
 	return entity
 end
@@ -48,16 +50,17 @@ function love.load()
 	levels = require("levels")
 	level = 1
 	totaldeaths = 2
-
-	-- Initialize entities with placeholder positions. changeLevel will set the real ones.
-	player = createEntity({
-		grid_x = 0, grid_y = 0, act_x = 0, act_y = 0, speed = 50,
-		color = COLORS.PLAYER, collectible_type = TILES.PLAYER_ITEM
-	})
-    target = createEntity({
-		grid_x = 0, grid_y = 0, act_x = 0, act_y = 0, speed = 100,
-		color = COLORS.TARGET, collectible_type = TILES.TARGET_ITEM
-	})
+	sound = {}
+	sound.collision = love.audio.newSource("sound/collision.wav", "static")
+	sound.music = love.audio.newSource("sound/music.wav", "stream")
+	sound.collision:setVolume(0.2)
+	sound.music:setVolume(0.1)
+	sound.music:setLooping(true)
+	sound.music:play()
+	sound.playerDeath = love.audio.newSource("sound/player_death.wav", "static")
+	sound.playerDeath:setVolume(0.2)
+	sound.targetDeath = love.audio.newSource("sound/target_death.wav", "static")
+	sound.targetDeath:setVolume(0.2)
 
 	player_emotion_sprites = {
 		neutral = love.graphics.newImage("sprites/player_neutral.png"),
@@ -71,6 +74,19 @@ function love.load()
 		happy = love.graphics.newImage("sprites/target_happy.png")
 	}
 
+	-- changeLevel sets real locations
+	player = createEntity({
+		grid_x = 0, grid_y = 0, act_x = 0, act_y = 0, speed = 50,
+		color = COLORS.PLAYER, collectible_type = TILES.PLAYER_ITEM, 
+		sprites = player_emotion_sprites, deathsounds = sound.playerDeath
+
+	})
+    target = createEntity({
+		grid_x = 0, grid_y = 0, act_x = 0, act_y = 0, speed = 100,
+		color = COLORS.TARGET, collectible_type = TILES.TARGET_ITEM, 
+		sprites = target_emotion_sprites, deathsounds = sound.targetDeath
+	})
+
 	wall_sprites = {
 		one = love.graphics.newImage("sprites/rock_1.png"),
 		two = love.graphics.newImage("sprites/rock_2.png"),
@@ -81,13 +97,6 @@ function love.load()
 	}
 
 	love.graphics.setNewFont("fonts/Pix32.ttf", 14)
-	sound = {}
-	sound.collision = love.audio.newSource("sound/collision.wav", "static")
-	sound.music = love.audio.newSource("sound/music.wav", "stream")
-	sound.collision:setVolume(0.2)
-	sound.music:setVolume(0.1)
-	sound.music:setLooping(true)
-	sound.music:play()
 
     -- win flag: becomes true when player lands on the same grid cell as the target
     win = false
@@ -107,7 +116,7 @@ function love.update(dt)
 	updateEntityPosition(player)
 	updateEntityPosition(target)
 
-	-- handle win timer: auto-advance to next level
+	-- auto-advance to next level
 	if win then
 		winTimer = winTimer + dt
 		if winTimer >= winHoldDuration then
@@ -125,7 +134,7 @@ function love.draw()
     end
     
     math.randomseed(os.time())
-    -- draw map tiles first
+    -- map tiles
         for y=1, #map do
             for x=1, #map[y] do
                 local tile = map[y][x]
@@ -173,12 +182,13 @@ function love.draw()
     -- draw entities on top of tiles
     local function drawEntity(entity)
         love.graphics.setColor(entity.color)
-        love.graphics.rectangle("fill", entity.act_x, entity.act_y, TILE_SIZE, TILE_SIZE)
+        love.graphics.rectangle("line", entity.act_x, entity.act_y, TILE_SIZE, TILE_SIZE)
+		love.graphics.draw(entity.sprites[entity.emotion], entity.act_x, entity.act_y, 0, .1, .1)
     end
     drawEntity(player)
     drawEntity(target)
 
-    -- UI: top-right panel with level and death counts
+    -- UI: top-right level and death counts
     local windowW, windowH = love.graphics.getDimensions()
     local panelW = 240
     local panelH = 112
@@ -374,6 +384,7 @@ function checkEntityEvents(entity)
 		entity.emotion = "sad"
 		entity.deathcount = entity.deathcount + 1
 		totaldeaths = totaldeaths + 1
+		entity.deathsounds:play()
 		changeLevel(level)
 		return true -- level changed, stop further processing
 	elseif tile == entity.collectible_type then
